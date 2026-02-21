@@ -1,107 +1,142 @@
 import random
 
+# Create Deck and Shoe
 
-def initialise_variables():
-    cards = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11]
-    player_cards = []
-    dealer_cards = []
-    return(cards, player_cards, dealer_cards)
+def create_shoe(num_decks=6):
+    suits = ["Hearts", "Diamonds", "Clubs", "Spades"]
+    ranks = {
+        "2": 2, "3": 3, "4": 4, "5": 5, "6": 6,
+        "7": 7, "8": 8, "9": 9,
+        "10": 10, "Jack": 10, "Queen": 10, "King": 10,
+        "Ace": 11
+    }
 
+    single_deck = []
 
-def deal_card(cards):
-    return random.choice(cards)
+    for suit in suits:
+        for rank, value in ranks.items():
+            single_deck.append((rank, suit, value))
 
+    shoe = single_deck * num_decks
+    random.shuffle(shoe)
+
+    return(shoe)
+
+# Hand Value calculation
 
 def calculate_hand_value(hand):
-    total = sum(hand)
-    ace_count = hand.count(11)
+    total = sum(card[2] for card in hand)
+    ace_count = sum(1 for card in hand if card[0] == "Ace")
 
-    # Adjust aces if bust
     while total > 21 and ace_count > 0:
         total -= 10
         ace_count -= 1
 
-    return total
+    return(total)
 
+# Deal Card
 
-def starting_hand(cards, player_cards, dealer_cards):
+def deal_card(shoe):
+    return shoe.pop()
+
+# Starting hand
+
+def starting_hand(shoe):
+    player_hand = []
+    dealer_hand = []
+
     for _ in range(2):
-        player_cards.append(deal_card(cards))
-        dealer_cards.append(deal_card(cards))
+        player_hand.append(deal_card(shoe))
+        dealer_hand.append(deal_card(shoe))
 
-    print(f"Your cards: {player_cards}")
-    print(f"Dealer shows: {dealer_cards[0]}")
+    return(player_hand, dealer_hand)
 
-    return player_cards, dealer_cards
+# Print Hand
 
+def print_hand(owner, hand, hide_first=False):
+    print(f"\n{owner}'s hand:")
 
-def player_turn(cards, player_cards):
+    for i, card in enumerate(hand):
+        if hide_first and i == 0:
+            print("Hidden card")
+        else:
+            rank, suit, value = card
+            print(f"{rank} of {suit} (Value: {value})")
+
+    if not hide_first:
+        print(f"Total value: {calculate_hand_value(hand)}")
+
+# Player Turn
+
+def player_turn(shoe, player_hand):
     while True:
-        player_value = calculate_hand_value(player_cards)
+        value = calculate_hand_value(player_hand)
 
-        if player_value > 21:
-            print(f"You are on {player_value}. You are bust.")
+        if value >= 21:
             break
 
-        choice = input(f"You are on {player_value}. Hit or stand? ").lower()
+        choice = input("\nHit or Stand? ").lower()
 
         if choice == "hit":
-            new_card = deal_card(cards)
-            player_cards.append(new_card)
-            print(f"You drew: {new_card}")
+            card = deal_card(shoe)
+            player_hand.append(card)
+            print(f"You drew {card[0]} of {card[1]}")
         elif choice == "stand":
             break
         else:
-            print("Invalid input. Please type 'hit' or 'stand'.")
+            print("Invalid input.")
 
-    return calculate_hand_value(player_cards)
+    return player_hand
 
+# Dealer Turn
 
-def dealer_turn(cards, dealer_cards):
-    print(f"\nDealer's full hand: {dealer_cards}")
+def dealer_turn(shoe, dealer_hand):
+    while calculate_hand_value(dealer_hand) < 17:
+        card = deal_card(shoe)
+        dealer_hand.append(card)
+        print(f"Dealer draws {card[0]} of {card[1]}")
 
-    while calculate_hand_value(dealer_cards) < 17:
-        new_card = deal_card(cards)
-        dealer_cards.append(new_card)
-        print(f"Dealer draws: {new_card}")
+    return(dealer_hand)
 
-    dealer_value = calculate_hand_value(dealer_cards)
-    print(f"Dealer ends on {dealer_value}")
+# Win Logic
 
-    return dealer_value
+def determine_winner(player_hand, dealer_hand):
+    player_value = calculate_hand_value(player_hand)
+    dealer_value = calculate_hand_value(dealer_hand)
 
-
-def determine_winner(player_value, dealer_value):
-    print("\nFinal Results:")
-    print(f"Your total: {player_value}")
-    print(f"Dealer total: {dealer_value}")
+    print(f"\nFinal Player Total: {player_value}")
+    print(f"Final Dealer Total: {dealer_value}")
 
     if player_value > 21:
-        print("You lost! (Bust)")
+        print("You bust. Dealer wins.")
     elif dealer_value > 21:
-        print("You won! (Dealer bust)")
+        print("Dealer busts. You win!")
     elif player_value > dealer_value:
-        print("You won!")
-    elif player_value < dealer_value:
-        print("You lost!")
+        print("You win!")
+    elif dealer_value > player_value:
+        print("Dealer wins.")
     else:
-        print("Tie!")
+        print("Push (Tie).")
 
-#organise dataflow
-def play_game():
-    cards, player_cards, dealer_cards = initialise_variables()
+# Main 
 
-    player_cards, dealer_cards = starting_hand(cards, player_cards, dealer_cards)
+def main():
+    shoe = create_shoe(6)
 
-    player_value = player_turn(cards, player_cards)
+    player_hand, dealer_hand = starting_hand(shoe)
 
-    if player_value <= 21:
-        dealer_value = dealer_turn(cards, dealer_cards)
-    else:
-        dealer_value = calculate_hand_value(dealer_cards)
+    print_hand("Dealer", dealer_hand, hide_first=True)
+    print_hand("Player", player_hand)
 
-    determine_winner(player_value, dealer_value)
+    player_hand = player_turn(shoe, player_hand)
+
+    if calculate_hand_value(player_hand) <= 21:
+        print("\nDealer reveals hidden card:")
+        print_hand("Dealer", dealer_hand)
+
+        dealer_hand = dealer_turn(shoe, dealer_hand)
+
+    determine_winner(player_hand, dealer_hand)
 
 
-# Run the game
-play_game()
+main()
