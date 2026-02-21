@@ -75,14 +75,20 @@ def player_turn(shoe, player_hand):
         if value >= 21:
             break
 
-        choice = input("\nHit or Stand? ").lower()
+        choice = input(f"\nYou are on {value}. Hit or Stand? ").lower()
 
         if choice == "hit":
             card = deal_card(shoe)
             player_hand.append(card)
+            new_value = calculate_hand_value(player_hand)
+
             print(f"You drew {card[0]} of {card[1]}")
+            print(f"Your new total is {new_value}")
+
         elif choice == "stand":
+            print(f"You stand on {value}")
             break
+
         else:
             print("Invalid input.")
 
