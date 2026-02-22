@@ -1,6 +1,6 @@
 import random
 
-# Create Deck and Shoe
+# Create Deck + Shoe
 
 def create_shoe(num_decks=6):
     suits = ["Hearts", "Diamonds", "Clubs", "Spades"]
@@ -20,9 +20,17 @@ def create_shoe(num_decks=6):
     shoe = single_deck * num_decks
     random.shuffle(shoe)
 
-    return(shoe)
+    return shoe
 
-# Hand Value calculation
+# Reshuffle Logic
+
+def reshuffle_if_needed(shoe, num_decks=6):
+    if len(shoe) < 52:
+        print("\n--- Reshuffling the shoe ---\n")
+        return create_shoe(num_decks)
+    return shoe
+
+# Hand Value Calculation
 
 def calculate_hand_value(hand):
     total = sum(card[2] for card in hand)
@@ -32,14 +40,14 @@ def calculate_hand_value(hand):
         total -= 10
         ace_count -= 1
 
-    return(total)
+    return total
 
 # Deal Card
 
 def deal_card(shoe):
     return shoe.pop()
 
-# Starting hand
+# Starting Hands
 
 def starting_hand(shoe):
     player_hand = []
@@ -49,7 +57,7 @@ def starting_hand(shoe):
         player_hand.append(deal_card(shoe))
         dealer_hand.append(deal_card(shoe))
 
-    return(player_hand, dealer_hand)
+    return player_hand, dealer_hand
 
 # Print Hand
 
@@ -102,47 +110,106 @@ def dealer_turn(shoe, dealer_hand):
         dealer_hand.append(card)
         print(f"Dealer draws {card[0]} of {card[1]}")
 
-    return(dealer_hand)
+    return dealer_hand
 
-# Win Logic
+# Determine Winner + Betting
 
-def determine_winner(player_hand, dealer_hand):
+def determine_winner(player_hand, dealer_hand, bet, balance):
     player_value = calculate_hand_value(player_hand)
     dealer_value = calculate_hand_value(dealer_hand)
 
     print(f"\nFinal Player Total: {player_value}")
     print(f"Final Dealer Total: {dealer_value}")
 
-    if player_value > 21:
+    player_blackjack = player_value == 21 and len(player_hand) == 2
+    dealer_blackjack = dealer_value == 21 and len(dealer_hand) == 2
+
+    if player_blackjack and not dealer_blackjack:
+        winnings = int(bet * 1.5)
+        print("Blackjack! You win 3:2 payout.")
+        balance += winnings
+
+    elif dealer_blackjack and not player_blackjack:
+        print("Dealer has Blackjack. You lose.")
+        balance -= bet
+
+    elif player_value > 21:
         print("You bust. Dealer wins.")
+        balance -= bet
+
     elif dealer_value > 21:
         print("Dealer busts. You win!")
+        balance += bet
+
     elif player_value > dealer_value:
         print("You win!")
+        balance += bet
+
     elif dealer_value > player_value:
         print("Dealer wins.")
-    else:
-        print("Push (Tie).")
+        balance -= bet
 
-# Main 
+    else:
+        print("Push. Bet returned.")
+
+    return balance
+
+# Main Game Loop
 
 def main():
     shoe = create_shoe(6)
+    balance = 100
 
-    player_hand, dealer_hand = starting_hand(shoe)
+    while True:
+        shoe = reshuffle_if_needed(shoe, 6)
 
-    print_hand("Dealer", dealer_hand, hide_first=True)
-    print_hand("Player", player_hand)
+        print(f"\nCards remaining in shoe: {len(shoe)}")
+        print(f"Current balance: £{balance}")
 
-    player_hand = player_turn(shoe, player_hand)
+        if balance <= 0:
+            print("You are out of money. Game over.")
+            break
 
-    if calculate_hand_value(player_hand) <= 21:
+        # Bet input
+        while True:
+            try:
+                bet = int(input("Enter your bet: £"))
+                if bet > 0 and bet <= balance:
+                    break
+                else:
+                    print("Invalid bet amount.")
+            except:
+                print("Please enter a valid number.")
+
+        player_hand, dealer_hand = starting_hand(shoe)
+
+        print_hand("Dealer", dealer_hand, hide_first=True)
+        print_hand("Player", player_hand)
+
+        player_value = calculate_hand_value(player_hand)
+        dealer_value = calculate_hand_value(dealer_hand)
+
+        player_blackjack = player_value == 21 and len(player_hand) == 2
+        dealer_blackjack = dealer_value == 21 and len(dealer_hand) == 2
+
+        if not player_blackjack:
+            player_hand = player_turn(shoe, player_hand)
+
         print("\nDealer reveals hidden card:")
         print_hand("Dealer", dealer_hand)
 
-        dealer_hand = dealer_turn(shoe, dealer_hand)
+        if calculate_hand_value(player_hand) <= 21 and not dealer_blackjack:
+            dealer_hand = dealer_turn(shoe, dealer_hand)
 
-    determine_winner(player_hand, dealer_hand)
+        balance = determine_winner(player_hand, dealer_hand, bet, balance)
+
+        again = input("\nPlay another round? (yes/no): ").lower()
+        while again != "yes" and again!= "no":
+            again = input("\nPlay another round? (Answer must be yes or no): ").lower()
+        if again != "yes":
+            break
+
+    print("Thanks for playing! You ended with: " + str(balance))
 
 
 main()
